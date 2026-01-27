@@ -42,7 +42,29 @@
         </div>
       </aside>
 
-      <section class="panel chat">
+      <div class="right-column">
+        <section class="panel moby-consult">
+          <div class="panel-header">
+            <div>
+              <h2>モビーに相談</h2>
+              <p class="subtitle">やさしいAIアシスタントがお答えします</p>
+            </div>
+            <div class="moby-avatar">🐾</div>
+          </div>
+          <div class="moby-chat" id="mobyChat">
+            <div class="moby-welcome">
+              <p>こんにちは！モビーだよ。<br>なんでも気軽に相談してね。</p>
+            </div>
+          </div>
+          <div class="composer">
+            <div class="composer-row">
+              <input id="mobyInput" type="text" placeholder="モビーに聞いてみよう…" />
+              <button class="pill send" id="mobyButton">聞く</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel chat">
         <div class="panel-header">
           <div>
             <h2 id="roomTitle">Loading...</h2>
@@ -58,7 +80,8 @@
             <button class="pill send" id="sendButton">送信</button>
           </div>
         </div>
-      </section>
+        </section>
+      </div>
     </main>
     <script>
       const state = { rooms: [], activeRoomId: null };
@@ -239,6 +262,79 @@
             activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
         }, 100);
+      });
+
+      // モビーに相談機能
+      const OPENROUTER_API_KEY = "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";
+      const mobyChatEl = document.getElementById("mobyChat");
+      const mobyInput = document.getElementById("mobyInput");
+      const mobyButton = document.getElementById("mobyButton");
+      const mobyHistory = [];
+
+      function addMobyMessage(content, isUser) {
+        const msg = document.createElement("div");
+        msg.className = `moby-message ${isUser ? "user" : "moby"}`;
+        msg.innerHTML = `
+          <div class="moby-bubble">
+            ${isUser ? "" : '<span class="moby-icon">🐾</span>'}
+            <p>${content}</p>
+          </div>
+        `;
+        mobyChatEl.appendChild(msg);
+        mobyChatEl.scrollTop = mobyChatEl.scrollHeight;
+      }
+
+      async function askMoby() {
+        const question = mobyInput.value.trim();
+        if (!question) return;
+
+        mobyInput.value = "";
+        addMobyMessage(question, true);
+        mobyHistory.push({ role: "user", content: question });
+
+        // ローディング表示
+        const loadingEl = document.createElement("div");
+        loadingEl.className = "moby-message moby";
+        loadingEl.innerHTML = `<div class="moby-bubble"><span class="moby-icon">🐾</span><p class="moby-loading">考え中...</p></div>`;
+        mobyChatEl.appendChild(loadingEl);
+        mobyChatEl.scrollTop = mobyChatEl.scrollHeight;
+
+        try {
+          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: "openai/gpt-3.5-turbo",
+              messages: [
+                { role: "system", content: "あなたは「モビー」という名前のやさしいAIアシスタントです。ユーザーの相談に親切に、やさしい口調で答えてください。回答は簡潔にしてください。" },
+                ...mobyHistory
+              ],
+            }),
+          });
+
+          loadingEl.remove();
+
+          if (!res.ok) {
+            throw new Error("API Error");
+          }
+
+          const data = await res.json();
+          const answer = data.choices?.[0]?.message?.content || "ごめんね、うまく答えられなかったよ。";
+          mobyHistory.push({ role: "assistant", content: answer });
+          addMobyMessage(answer, false);
+        } catch (err) {
+          loadingEl.remove();
+          addMobyMessage("ごめんね、接続エラーが起きちゃった。もう一度試してみてね。", false);
+          console.error(err);
+        }
+      }
+
+      mobyButton.addEventListener("click", askMoby);
+      mobyInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") askMoby();
       });
 
       ensureNickname();
