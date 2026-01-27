@@ -60,11 +60,13 @@ module.exports = async (req, res) => {
       return res.status(cfRes.status).json({ error: "Cloudflare AI Error", status: cfRes.status, details: data });
     }
 
-    const response = data?.result?.response || null;
+    // レスポンス形式をチェック
+    const response = data?.result?.response || data?.response || null;
     console.log("Cloudflare AI response text:", response ? response.substring(0, 100) + "..." : "null");
 
     res.setHeader("Content-Type", "application/json");
-    return res.status(200).json({ response });
+    // デバッグ用に生データも返す
+    return res.status(200).json({ response, _debug: data });
   } catch (err) {
     console.error("Moby API Error:", err);
     return res.status(500).json({ error: "Server error" });
