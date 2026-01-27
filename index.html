@@ -285,6 +285,8 @@
 
       // Moby API 呼び出し（Vercelプロキシ経由）
       async function callMobyAPI(messages) {
+        console.log("Calling Moby API with messages:", messages);
+        
         const res = await fetch("/api/moby", {
           method: "POST",
           headers: {
@@ -293,14 +295,21 @@
           body: JSON.stringify({ messages }),
         });
 
+        console.log("Moby API response status:", res.status);
+
+        const data = await res.json().catch((e) => {
+          console.error("Failed to parse response JSON:", e);
+          return null;
+        });
+
+        console.log("Moby API response data:", data);
+
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          console.error("Moby API Error:", errorData);
-          throw new Error("Moby API Error");
+          console.error("Moby API Error:", res.status, data);
+          throw new Error(`Moby API Error: ${res.status}`);
         }
 
-        const data = await res.json();
-        return data.response || null;
+        return data?.response || null;
       }
 
       async function askMoby() {

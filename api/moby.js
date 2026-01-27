@@ -31,6 +31,8 @@ module.exports = async (req, res) => {
     }
 
     // Cloudflare Workers AI を呼び出し
+    console.log("Calling Cloudflare AI with messages:", messages.length, "messages");
+    
     const cfRes = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/@cf/qwen/qwen3-30b-a3b-fp8`,
       {
@@ -48,14 +50,18 @@ module.exports = async (req, res) => {
       }
     );
 
+    console.log("Cloudflare AI response status:", cfRes.status);
+
+    const data = await cfRes.json().catch(() => null);
+    console.log("Cloudflare AI response data:", JSON.stringify(data));
+
     if (!cfRes.ok) {
-      const errorData = await cfRes.json().catch(() => ({}));
-      console.error("Cloudflare AI Error:", errorData);
-      return res.status(cfRes.status).json({ error: "Cloudflare AI Error", details: errorData });
+      console.error("Cloudflare AI Error:", cfRes.status, data);
+      return res.status(cfRes.status).json({ error: "Cloudflare AI Error", status: cfRes.status, details: data });
     }
 
-    const data = await cfRes.json();
-    const response = data.result?.response || null;
+    const response = data?.result?.response || null;
+    console.log("Cloudflare AI response text:", response ? response.substring(0, 100) + "..." : "null");
 
     res.setHeader("Content-Type", "application/json");
     return res.status(200).json({ response });
