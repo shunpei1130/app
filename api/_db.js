@@ -1,4 +1,4 @@
-﻿const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 let schemaReady = false;
 
 async function ensureSchema(sql) {
@@ -7,7 +7,8 @@ async function ensureSchema(sql) {
     CREATE TABLE IF NOT EXISTS rooms (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
-      created_at BIGINT NOT NULL
+      created_at BIGINT NOT NULL,
+      password_hash TEXT
     )
   `;
   await sql`
@@ -22,6 +23,7 @@ async function ensureSchema(sql) {
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_room ON messages(room_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_expires ON messages(expires_at)`;
+  await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS password_hash TEXT`;
   schemaReady = true;
 }
 
@@ -47,6 +49,7 @@ async function listRooms(sql) {
   const now = Date.now();
   const result = await sql`
     SELECT r.id, r.name,
+      (r.password_hash IS NOT NULL AND r.password_hash <> '') as has_password,
       (SELECT COUNT(*) FROM messages m WHERE m.room_id = r.id AND m.expires_at > ${now}) as active_messages,
       (SELECT MIN(m.expires_at) FROM messages m WHERE m.room_id = r.id AND m.expires_at > ${now}) as next_expire_at
     FROM rooms r
@@ -62,6 +65,7 @@ async function listRooms(sql) {
       activeMessages: Number(row.active_messages) || 0,
       nextExpireAt,
       nextExpiresIn: `${hours}h`,
+      hasPassword: row.has_password === true,
     };
   });
 }
@@ -93,14 +97,23 @@ async function addMessage(sql, roomId, author, body) {
   `;
 }
 
-async function addRoom(sql, name) {
+async function addRoom(sql, name, passwordHash) {
   const now = Date.now();
   const result = await sql`
-    INSERT INTO rooms (name, created_at)
-    VALUES (${name}, ${now})
+    INSERT INTO rooms (name, created_at, password_hash)
+    VALUES (${name}, ${now}, ${passwordHash || null})
     RETURNING id
   `;
   return result.rows[0].id;
+}
+
+async function getRoomPasswordHash(sql, roomId) {
+  const result = await sql`
+    SELECT password_hash
+    FROM rooms
+    WHERE id = ${roomId}
+  `;
+  return result.rows[0]?.password_hash || "";
 }
 
 async function getJson(req) {
@@ -129,5 +142,6 @@ module.exports = {
   listMessages,
   addMessage,
   addRoom,
+  getRoomPasswordHash,
   getJson,
 };

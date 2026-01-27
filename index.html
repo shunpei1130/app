@@ -70,37 +70,12 @@
           </div>
         </div>
       </section>
-
-      <aside class="panel vibe">
-        <div class="panel-header">
-          <h2>空気感</h2>
-          <span class="badge soft">安定</span>
-        </div>
-        <div class="vibe-card">
-          <h3>いまの参加者</h3>
-          <div class="mini-avatars">
-            <span>AZ</span>
-            <span>MI</span>
-            <span>TO</span>
-            <span>SO</span>
-            <span>YU</span>
-            <span class="more">+7</span>
-          </div>
-          <p class="note">短く、やさしいメッセージで。</p>
-        </div>
-        <div class="vibe-card">
-          <h3>今日の小さな幸せ</h3>
-          <p>小さな良いことをひとつ。明日には消えます。</p>
-          <button class="pill small">投稿する</button>
-        </div>
-        <div class="vibe-card soft-gradient">
-          <h3>やさしいリマインド</h3>
-          <p>24時間で自動クリア。いつでも新しい気持ちで。</p>
-        </div>
-      </aside>
     </main>
     <script>
       const state = { rooms: [], activeRoomId: null };
+      const roomPasswords = new Map();
+      const nicknameKey = "mofu_nickname";
+      let nickname = localStorage.getItem(nicknameKey);
 
       const roomListEl = document.getElementById("roomList");
       const roomCountEl = document.getElementById("roomCount");
@@ -126,6 +101,27 @@
         return `自動消去まで ${hours}時間 ${mins}分`;
       };
 
+      function ensureNickname() {
+        if (nickname) return;
+        const input = window.prompt("ニックネームを登録してください");
+        nickname = String(input || "").trim().slice(0, 12);
+        if (!nickname) {
+          nickname = `ねこ${Math.floor(Math.random() * 900 + 100)}`;
+        }
+        localStorage.setItem(nicknameKey, nickname);
+      }
+
+      function getPasswordForRoom(roomId) {
+        return roomPasswords.get(roomId) || "";
+      }
+
+      function promptPassword(room) {
+        const pw = window.prompt(`「${room.name}」のパスワードを入力`);
+        if (!pw) return false;
+        roomPasswords.set(room.id, pw);
+        return true;
+      }
+
       async function fetchRooms() {
         const res = await fetch("/api/rooms");
         const data = await res.json();
@@ -146,14 +142,19 @@
         state.rooms.forEach((room) => {
           const btn = document.createElement("button");
           btn.className = `room ${room.id === state.activeRoomId ? "active" : ""}`;
+          const lockNote = room.hasPassword ? " ・鍵あり" : "";
           btn.innerHTML = `
             <span class="dot"></span>
             <div>
               <h3>${room.name}</h3>
-              <p>アクティブ ${room.activeMessages} ・消えるまで ${room.nextExpiresIn}</p>
+              <p>アクティブ ${room.activeMessages} ・消えるまで ${room.nextExpiresIn}${lockNote}</p>
             </div>
           `;
           btn.addEventListener("click", async () => {
+            if (room.hasPassword && !getPasswordForRoom(room.id)) {
+              const ok = promptPassword(room);
+              if (!ok) return;
+            }
             state.activeRoomId = room.id;
             renderRooms();
             await loadMessages();
@@ -164,7 +165,16 @@
 
       async function loadMessages() {
         if (!state.activeRoomId) return;
-        const res = await fetch(`/api/rooms/${state.activeRoomId}/messages`);
+        const password = getPasswordForRoom(state.activeRoomId);
+        const res = await fetch(`/api/rooms/${state.activeRoomId}/messages`, {
+          headers: password ? { "x-room-password": password } : {},
+        });
+        if (res.status === 403) {
+          const room = state.rooms.find((r) => r.id === state.activeRoomId);
+          if (room?.hasPassword && promptPassword(room)) {
+            return loadMessages();
+          }
+        }
         const data = await res.json();
         const activeRoom = state.rooms.find((r) => r.id === state.activeRoomId);
         roomTitleEl.textContent = activeRoom?.name || "Room";
@@ -172,13 +182,13 @@
         chatBodyEl.innerHTML = "";
         data.messages.forEach((msg) => {
           const wrapper = document.createElement("div");
-          const isMe = msg.author === "ME";
+          const isMe = msg.author === nickname;
           wrapper.className = `message ${isMe ? "me" : "other"}`;
           wrapper.innerHTML = `
-            ${isMe ? "" : `<div class="avatar">${msg.author.slice(0, 2)}</div>`}
+            ${isMe ? "" : `<div class="avatar">?</div>`}
             <div class="bubble">
               <p>${msg.body}</p>
-              <span class="meta">${fmtTime(msg.createdAt)} · fades ${fmtTime(msg.expiresAt)}</span>
+              <span class="meta">${fmtTime(msg.createdAt)} ・消える時刻 ${fmtTime(msg.expiresAt)}</span>
             </div>
             ${isMe ? `<div class="avatar">ME</div>` : ""}
           `;
@@ -189,10 +199,14 @@
       async function sendMessage() {
         const body = composerInput.value.trim();
         if (!body || !state.activeRoomId) return;
+        const password = getPasswordForRoom(state.activeRoomId);
         await fetch(`/api/rooms/${state.activeRoomId}/messages`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ author: "ME", body }),
+          headers: {
+            "Content-Type": "application/json",
+            ...(password ? { "x-room-password": password } : {}),
+          },
+          body: JSON.stringify({ author: nickname, body }),
         });
         composerInput.value = "";
         await loadMessages();
@@ -205,14 +219,16 @@
       newRoomButton.addEventListener("click", async () => {
         const name = window.prompt("ルーム名は？");
         if (!name) return;
+        const password = window.prompt("パスワード（任意・空欄OK）") || "";
         await fetch("/api/rooms", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name }),
+          body: JSON.stringify({ name, password }),
         });
         await fetchRooms();
       });
 
+      ensureNickname();
       fetchRooms();
       setInterval(fetchRooms, 15000);
     </script>

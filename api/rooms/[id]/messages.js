@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { sql } = require("@vercel/postgres");
 const {
   ensureSchema,
@@ -5,8 +6,21 @@ const {
   cleanupExpired,
   listMessages,
   addMessage,
+  getRoomPasswordHash,
   getJson,
 } = require("../../_db");
+
+function hashPassword(password) {
+  if (!password) return "";
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+async function verifyAccess(roomId, password) {
+  const storedHash = await getRoomPasswordHash(sql, roomId);
+  if (!storedHash) return true;
+  const incomingHash = hashPassword(password || "");
+  return storedHash === incomingHash;
+}
 
 module.exports = async (req, res) => {
   try {
@@ -17,6 +31,12 @@ module.exports = async (req, res) => {
     const roomId = Number(req.query.id);
     if (!roomId) {
       return res.status(400).json({ error: "Invalid room id" });
+    }
+
+    const password = req.headers["x-room-password"] || "";
+    const allowed = await verifyAccess(roomId, password);
+    if (!allowed) {
+      return res.status(403).json({ error: "Forbidden" });
     }
 
     if (req.method === "GET") {

@@ -1,4 +1,5 @@
-﻿const { sql } = require("@vercel/postgres");
+const crypto = require("crypto");
+const { sql } = require("@vercel/postgres");
 const {
   ensureSchema,
   seedIfEmpty,
@@ -7,6 +8,11 @@ const {
   addRoom,
   getJson,
 } = require("../_db");
+
+function hashPassword(password) {
+  if (!password) return "";
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
 
 module.exports = async (req, res) => {
   try {
@@ -23,10 +29,12 @@ module.exports = async (req, res) => {
     if (req.method === "POST") {
       const body = await getJson(req);
       const name = String(body.name || "").trim().slice(0, 40);
+      const password = String(body.password || "").trim();
       if (!name) {
         return res.status(400).json({ error: "Room name is empty" });
       }
-      const id = await addRoom(sql, name);
+      const passwordHash = password ? hashPassword(password) : "";
+      const id = await addRoom(sql, name, passwordHash);
       res.setHeader("Content-Type", "application/json");
       return res.status(200).json({ id });
     }
