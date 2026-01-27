@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -59,11 +59,6 @@
         <div class="chat-body" id="chatBody"></div>
 
         <div class="composer">
-          <div class="composer-tools">
-            <button class="pill tiny ghost">スタンプ</button>
-            <button class="pill tiny ghost">写真</button>
-            <button class="pill tiny ghost">ムード</button>
-          </div>
           <div class="composer-row">
             <input id="composerInput" type="text" placeholder="やさしい言葉をひとこと…" />
             <button class="pill send" id="sendButton">送信</button>
@@ -158,6 +153,13 @@
             state.activeRoomId = room.id;
             renderRooms();
             await loadMessages();
+            // 選択した部屋までスクロール
+            setTimeout(() => {
+              const activeBtn = roomListEl.querySelector('.room.active');
+              if (activeBtn) {
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }, 100);
           });
           roomListEl.appendChild(btn);
         });
@@ -226,6 +228,13 @@
           body: JSON.stringify({ name, password }),
         });
         await fetchRooms();
+        // 作成した部屋までスクロール
+        setTimeout(() => {
+          const activeBtn = roomListEl.querySelector('.room.active');
+          if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 100);
       });
 
       ensureNickname();
