@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --cream-1: #fff8e7;
   --cream-2: #fbf1e6;
   --cream-3: #fff7ee;
@@ -270,6 +270,20 @@ p {
 
 .message.me {
   justify-content: flex-end;
+}
+
+.author-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.author-name {
+  font-size: 0.65rem;
+  color: var(--ink-2);
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .avatar {

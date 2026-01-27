@@ -23,7 +23,6 @@
         </div>
       </div>
       <div class="top-actions">
-        <button class="pill ghost">おだやかモード</button>
         <button class="pill" id="newRoomButton">新しいルーム</button>
       </div>
     </header>
@@ -48,11 +47,6 @@
           <div>
             <h2 id="roomTitle">Loading...</h2>
             <p class="subtitle" id="roomSubtitle">ローカルサーバーへ接続中</p>
-          </div>
-          <div class="chip-row">
-            <span class="chip">かわいい</span>
-            <span class="chip">おだやか</span>
-            <span class="chip">安全</span>
           </div>
         </div>
 
@@ -187,12 +181,22 @@
           const isMe = msg.author === nickname;
           wrapper.className = `message ${isMe ? "me" : "other"}`;
           wrapper.innerHTML = `
-            ${isMe ? "" : `<div class="avatar">?</div>`}
+            ${isMe ? "" : `
+              <div class="author-section">
+                <span class="author-name">${msg.author}</span>
+                <div class="avatar">?</div>
+              </div>
+            `}
             <div class="bubble">
               <p>${msg.body}</p>
               <span class="meta">${fmtTime(msg.createdAt)} ・消える時刻 ${fmtTime(msg.expiresAt)}</span>
             </div>
-            ${isMe ? `<div class="avatar">ME</div>` : ""}
+            ${isMe ? `
+              <div class="author-section">
+                <span class="author-name">${msg.author}</span>
+                <div class="avatar">ME</div>
+              </div>
+            ` : ""}
           `;
           chatBodyEl.appendChild(wrapper);
         });
