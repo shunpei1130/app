@@ -3,3 +3,5 @@ app.db
 .vercel/
 .env
 .env.local
+.vercel
+.env*.local
