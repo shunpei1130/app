@@ -1,0 +1,220 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MofuChat - 24h Only Cute Chat</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Yomogi&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="bg-sparkle"></div>
+    <header class="topbar">
+      <div class="logo">
+        <span class="logo-badge">MC</span>
+        <div class="logo-text">
+          <h1>MofuChat</h1>
+          <p>Soft, tiny, 24h-only chat</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="pill ghost">Quiet Mode</button>
+        <button class="pill" id="newRoomButton">New Room</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel rooms">
+        <div class="panel-header">
+          <h2>Rooms</h2>
+          <span class="badge" id="roomCount">0</span>
+        </div>
+        <div class="room-list" id="roomList"></div>
+        <div class="panel-footer">
+          <div class="tip">
+            <span class="tip-title">24h rule</span>
+            <p>All chats vanish after 24 hours. Keep it gentle.</p>
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel chat">
+        <div class="panel-header">
+          <div>
+            <h2 id="roomTitle">Loading...</h2>
+            <p class="subtitle" id="roomSubtitle">Connecting to local server</p>
+          </div>
+          <div class="chip-row">
+            <span class="chip">Cute</span>
+            <span class="chip">Low noise</span>
+            <span class="chip">Safe</span>
+          </div>
+        </div>
+
+        <div class="chat-body" id="chatBody"></div>
+
+        <div class="composer">
+          <div class="composer-tools">
+            <button class="pill tiny ghost">Sticker</button>
+            <button class="pill tiny ghost">Photo</button>
+            <button class="pill tiny ghost">Mood</button>
+          </div>
+          <div class="composer-row">
+            <input id="composerInput" type="text" placeholder="Write something gentle..." />
+            <button class="pill send" id="sendButton">Send</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel vibe">
+        <div class="panel-header">
+          <h2>Vibe</h2>
+          <span class="badge soft">Stable</span>
+        </div>
+        <div class="vibe-card">
+          <h3>Active now</h3>
+          <div class="mini-avatars">
+            <span>AZ</span>
+            <span>MI</span>
+            <span>TO</span>
+            <span>SO</span>
+            <span>YU</span>
+            <span class="more">+7</span>
+          </div>
+          <p class="note">Keep messages short and kind.</p>
+        </div>
+        <div class="vibe-card">
+          <h3>Daily charm</h3>
+          <p>Share one tiny good thing. It disappears tomorrow.</p>
+          <button class="pill small">Post charm</button>
+        </div>
+        <div class="vibe-card soft-gradient">
+          <h3>Soft reminder</h3>
+          <p>Chats auto-clean every 24h for a fresh start.</p>
+        </div>
+      </aside>
+    </main>
+    <script>
+      const state = { rooms: [], activeRoomId: null };
+
+      const roomListEl = document.getElementById("roomList");
+      const roomCountEl = document.getElementById("roomCount");
+      const roomTitleEl = document.getElementById("roomTitle");
+      const roomSubtitleEl = document.getElementById("roomSubtitle");
+      const chatBodyEl = document.getElementById("chatBody");
+      const composerInput = document.getElementById("composerInput");
+      const sendButton = document.getElementById("sendButton");
+      const newRoomButton = document.getElementById("newRoomButton");
+
+      const fmtTime = (ms) => {
+        const date = new Date(ms);
+        const h = String(date.getHours()).padStart(2, "0");
+        const m = String(date.getMinutes()).padStart(2, "0");
+        return `${h}:${m}`;
+      };
+
+      const fmtRemaining = (ms) => {
+        if (!ms) return "24h auto-erase";
+        const diff = Math.max(0, ms - Date.now());
+        const hours = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        return `Auto-erase in ${hours}h ${mins}m`;
+      };
+
+      async function fetchRooms() {
+        const res = await fetch("/api/rooms");
+        const data = await res.json();
+        state.rooms = data.rooms;
+        roomCountEl.textContent = data.rooms.length;
+        if (!state.activeRoomId && data.rooms.length) {
+          state.activeRoomId = data.rooms[0].id;
+        }
+        if (state.activeRoomId && !data.rooms.find((room) => room.id === state.activeRoomId)) {
+          state.activeRoomId = data.rooms[0]?.id || null;
+        }
+        renderRooms();
+        await loadMessages();
+      }
+
+      function renderRooms() {
+        roomListEl.innerHTML = "";
+        state.rooms.forEach((room) => {
+          const btn = document.createElement("button");
+          btn.className = `room ${room.id === state.activeRoomId ? "active" : ""}`;
+          btn.innerHTML = `
+            <span class="dot"></span>
+            <div>
+              <h3>${room.name}</h3>
+              <p>${room.activeMessages} active · fades in ${room.nextExpiresIn}</p>
+            </div>
+          `;
+          btn.addEventListener("click", async () => {
+            state.activeRoomId = room.id;
+            renderRooms();
+            await loadMessages();
+          });
+          roomListEl.appendChild(btn);
+        });
+      }
+
+      async function loadMessages() {
+        if (!state.activeRoomId) return;
+        const res = await fetch(`/api/rooms/${state.activeRoomId}/messages`);
+        const data = await res.json();
+        const activeRoom = state.rooms.find((r) => r.id === state.activeRoomId);
+        roomTitleEl.textContent = activeRoom?.name || "Room";
+        roomSubtitleEl.textContent = fmtRemaining(activeRoom?.nextExpireAt);
+        chatBodyEl.innerHTML = "";
+        data.messages.forEach((msg) => {
+          const wrapper = document.createElement("div");
+          const isMe = msg.author === "ME";
+          wrapper.className = `message ${isMe ? "me" : "other"}`;
+          wrapper.innerHTML = `
+            ${isMe ? "" : `<div class="avatar">${msg.author.slice(0, 2)}</div>`}
+            <div class="bubble">
+              <p>${msg.body}</p>
+              <span class="meta">${fmtTime(msg.createdAt)} · fades ${fmtTime(msg.expiresAt)}</span>
+            </div>
+            ${isMe ? `<div class="avatar">ME</div>` : ""}
+          `;
+          chatBodyEl.appendChild(wrapper);
+        });
+      }
+
+      async function sendMessage() {
+        const body = composerInput.value.trim();
+        if (!body || !state.activeRoomId) return;
+        await fetch(`/api/rooms/${state.activeRoomId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ author: "ME", body }),
+        });
+        composerInput.value = "";
+        await loadMessages();
+      }
+
+      sendButton.addEventListener("click", sendMessage);
+      composerInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") sendMessage();
+      });
+      newRoomButton.addEventListener("click", async () => {
+        const name = window.prompt("Room name?");
+        if (!name) return;
+        await fetch("/api/rooms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        await fetchRooms();
+      });
+
+      fetchRooms();
+      setInterval(fetchRooms, 15000);
+    </script>
+  </body>
+</html>
