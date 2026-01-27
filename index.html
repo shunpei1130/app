@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MofuChat - 24h Only Cute Chat</title>
+    <title>MofuChat - 24時間で消えるかわいいチャット</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,26 +19,26 @@
         <span class="logo-badge">MC</span>
         <div class="logo-text">
           <h1>MofuChat</h1>
-          <p>Soft, tiny, 24h-only chat</p>
+          <p>やさしい 24時間だけの小さなチャット</p>
         </div>
       </div>
       <div class="top-actions">
-        <button class="pill ghost">Quiet Mode</button>
-        <button class="pill" id="newRoomButton">New Room</button>
+        <button class="pill ghost">おだやかモード</button>
+        <button class="pill" id="newRoomButton">新しいルーム</button>
       </div>
     </header>
 
     <main class="layout">
       <aside class="panel rooms">
         <div class="panel-header">
-          <h2>Rooms</h2>
+          <h2>ルーム</h2>
           <span class="badge" id="roomCount">0</span>
         </div>
         <div class="room-list" id="roomList"></div>
         <div class="panel-footer">
           <div class="tip">
-            <span class="tip-title">24h rule</span>
-            <p>All chats vanish after 24 hours. Keep it gentle.</p>
+            <span class="tip-title">24時間ルール</span>
+            <p>チャットは24時間で消えます。やさしく話そう。</p>
           </div>
         </div>
       </aside>
@@ -47,12 +47,12 @@
         <div class="panel-header">
           <div>
             <h2 id="roomTitle">Loading...</h2>
-            <p class="subtitle" id="roomSubtitle">Connecting to local server</p>
+            <p class="subtitle" id="roomSubtitle">ローカルサーバーへ接続中</p>
           </div>
           <div class="chip-row">
-            <span class="chip">Cute</span>
-            <span class="chip">Low noise</span>
-            <span class="chip">Safe</span>
+            <span class="chip">かわいい</span>
+            <span class="chip">おだやか</span>
+            <span class="chip">安全</span>
           </div>
         </div>
 
@@ -60,24 +60,24 @@
 
         <div class="composer">
           <div class="composer-tools">
-            <button class="pill tiny ghost">Sticker</button>
-            <button class="pill tiny ghost">Photo</button>
-            <button class="pill tiny ghost">Mood</button>
+            <button class="pill tiny ghost">スタンプ</button>
+            <button class="pill tiny ghost">写真</button>
+            <button class="pill tiny ghost">ムード</button>
           </div>
           <div class="composer-row">
-            <input id="composerInput" type="text" placeholder="Write something gentle..." />
-            <button class="pill send" id="sendButton">Send</button>
+            <input id="composerInput" type="text" placeholder="やさしい言葉をひとこと…" />
+            <button class="pill send" id="sendButton">送信</button>
           </div>
         </div>
       </section>
 
       <aside class="panel vibe">
         <div class="panel-header">
-          <h2>Vibe</h2>
-          <span class="badge soft">Stable</span>
+          <h2>空気感</h2>
+          <span class="badge soft">安定</span>
         </div>
         <div class="vibe-card">
-          <h3>Active now</h3>
+          <h3>いまの参加者</h3>
           <div class="mini-avatars">
             <span>AZ</span>
             <span>MI</span>
@@ -86,16 +86,16 @@
             <span>YU</span>
             <span class="more">+7</span>
           </div>
-          <p class="note">Keep messages short and kind.</p>
+          <p class="note">短く、やさしいメッセージで。</p>
         </div>
         <div class="vibe-card">
-          <h3>Daily charm</h3>
-          <p>Share one tiny good thing. It disappears tomorrow.</p>
-          <button class="pill small">Post charm</button>
+          <h3>今日の小さな幸せ</h3>
+          <p>小さな良いことをひとつ。明日には消えます。</p>
+          <button class="pill small">投稿する</button>
         </div>
         <div class="vibe-card soft-gradient">
-          <h3>Soft reminder</h3>
-          <p>Chats auto-clean every 24h for a fresh start.</p>
+          <h3>やさしいリマインド</h3>
+          <p>24時間で自動クリア。いつでも新しい気持ちで。</p>
         </div>
       </aside>
     </main>
@@ -119,11 +119,11 @@
       };
 
       const fmtRemaining = (ms) => {
-        if (!ms) return "24h auto-erase";
+        if (!ms) return "24時間で自動消去";
         const diff = Math.max(0, ms - Date.now());
         const hours = Math.floor(diff / 3600000);
         const mins = Math.floor((diff % 3600000) / 60000);
-        return `Auto-erase in ${hours}h ${mins}m`;
+        return `自動消去まで ${hours}時間 ${mins}分`;
       };
 
       async function fetchRooms() {
@@ -150,7 +150,7 @@
             <span class="dot"></span>
             <div>
               <h3>${room.name}</h3>
-              <p>${room.activeMessages} active · fades in ${room.nextExpiresIn}</p>
+              <p>アクティブ ${room.activeMessages} ・消えるまで ${room.nextExpiresIn}</p>
             </div>
           `;
           btn.addEventListener("click", async () => {
@@ -203,7 +203,7 @@
         if (event.key === "Enter") sendMessage();
       });
       newRoomButton.addEventListener("click", async () => {
-        const name = window.prompt("Room name?");
+        const name = window.prompt("ルーム名は？");
         if (!name) return;
         await fetch("/api/rooms", {
           method: "POST",
