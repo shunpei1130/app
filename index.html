@@ -264,14 +264,11 @@
         }, 100);
       });
 
-      // モビーに相談機能 (Cloudflare Workers AI)
-      const CF_ACCOUNT_ID = "1ec4b5bc6f5900ea97357a03414123a0";
-      const CF_API_TOKEN = "molc-EZbbuusYxEHaWSEt5FSZilueC1xYdavPr5r";
+      // モビーに相談機能 (Cloudflare Workers AI via Vercel API)
       const mobyChatEl = document.getElementById("mobyChat");
       const mobyInput = document.getElementById("mobyInput");
       const mobyButton = document.getElementById("mobyButton");
       const mobyHistory = [];
-      const MOBY_SYSTEM_PROMPT = "あなたは「モビー」という名前のやさしいAIアシスタントです。ユーザーの相談に親切に、やさしい口調で答えてください。回答は簡潔にしてください。";
 
       function addMobyMessage(content, isUser) {
         const msg = document.createElement("div");
@@ -286,30 +283,24 @@
         mobyChatEl.scrollTop = mobyChatEl.scrollHeight;
       }
 
-      // Cloudflare Workers AI 呼び出し
-      async function callCloudflareAI(messages) {
-        const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/@cf/qwen/qwen3-30b-a3b-fp8`, {
+      // Moby API 呼び出し（Vercelプロキシ経由）
+      async function callMobyAPI(messages) {
+        const res = await fetch("/api/moby", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${CF_API_TOKEN}`,
           },
-          body: JSON.stringify({
-            messages: [
-              { role: "system", content: MOBY_SYSTEM_PROMPT },
-              ...messages
-            ],
-          }),
+          body: JSON.stringify({ messages }),
         });
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          console.error("Cloudflare AI Error:", errorData);
-          throw new Error("Cloudflare AI Error");
+          console.error("Moby API Error:", errorData);
+          throw new Error("Moby API Error");
         }
 
         const data = await res.json();
-        return data.result?.response || null;
+        return data.response || null;
       }
 
       async function askMoby() {
@@ -330,9 +321,9 @@
         let answer = null;
 
         try {
-          answer = await callCloudflareAI(mobyHistory);
+          answer = await callMobyAPI(mobyHistory);
         } catch (err) {
-          console.error("Cloudflare AI failed:", err);
+          console.error("Moby API failed:", err);
         }
 
         loadingEl.remove();
