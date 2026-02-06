@@ -24,6 +24,7 @@
       </div>
       <div class="top-actions">
         <button class="pill" id="newRoomButton">新しいルーム</button>
+        <button class="pill dev-switch" id="developerTabButton">こんにちは<br>開発者です</button>
       </div>
     </header>
 
@@ -37,13 +38,13 @@
         <div class="panel-footer">
           <div class="tip">
             <span class="tip-title">24時間ルール</span>
-            <p>チャットは24時間で消えます。やさしく話そう。</p>
+            <p>チャットとルームは24時間で消えます。やさしく話そう。</p>
           </div>
         </div>
       </aside>
 
       <div class="right-column">
-        <section class="panel moby-consult">
+        <section class="panel moby-consult js-chat-tab">
           <div class="panel-header">
             <div>
               <h2>モビーに相談</h2>
@@ -64,7 +65,7 @@
           </div>
         </section>
 
-        <section class="panel chat">
+        <section class="panel chat js-chat-tab">
         <div class="panel-header">
           <div>
             <h2 id="roomTitle">Loading...</h2>
@@ -80,6 +81,37 @@
             <button class="pill send" id="sendButton">送信</button>
           </div>
         </div>
+        </section>
+
+        <section class="panel developer-panel hidden-tab" id="developerPanel">
+          <div class="panel-header">
+            <div>
+              <h2>開発者から</h2>
+              <p class="subtitle">ご意見をお聞かせください</p>
+            </div>
+            <button class="pill ghost small" id="backToChatButton" type="button">チャットへ戻る</button>
+          </div>
+          <div class="developer-message" id="developerMessage">
+            <p>こんにちは。モビー兼MofuChatの開発者です。このチャットはしんどい人同士助け合えるコミュニティが作れたらいいなと思って作成しました。アプリとしてほしい日とがいたら下ご意見に入力していただければ幸いです。また、下のご意見には、他にはこんなアプリ・サービスがあったらいいな、といった意見も待ってます。皆さんが少しでも楽しい毎日を過ごせたらと思ってます。</p>
+          </div>
+          <form class="feedback-form" id="feedbackForm">
+            <label class="feedback-label" for="feedbackOpinion">ご意見</label>
+            <textarea id="feedbackOpinion" maxlength="1200" required placeholder="自由にご意見を書いてください"></textarea>
+            <div class="feedback-optional">
+              <div>
+                <label class="feedback-label" for="feedbackNickname">ニックネーム（任意）</label>
+                <input id="feedbackNickname" type="text" maxlength="24" placeholder="例: ねこ123" />
+              </div>
+              <div>
+                <label class="feedback-label" for="feedbackEmail">メールアドレス（任意）</label>
+                <input id="feedbackEmail" type="email" maxlength="120" placeholder="example@mail.com" />
+              </div>
+            </div>
+            <div class="feedback-actions">
+              <button class="pill send" id="feedbackSubmitButton" type="submit">ご意見を送信</button>
+              <span class="feedback-status" id="feedbackStatus" aria-live="polite"></span>
+            </div>
+          </form>
         </section>
       </div>
     </main>
@@ -97,6 +129,18 @@
       const composerInput = document.getElementById("composerInput");
       const sendButton = document.getElementById("sendButton");
       const newRoomButton = document.getElementById("newRoomButton");
+      const developerTabButton = document.getElementById("developerTabButton");
+      const backToChatButton = document.getElementById("backToChatButton");
+      const chatTabEls = Array.from(document.querySelectorAll(".js-chat-tab"));
+      const developerPanelEl = document.getElementById("developerPanel");
+      const developerMessageEl = document.getElementById("developerMessage");
+      const feedbackFormEl = document.getElementById("feedbackForm");
+      const feedbackOpinionEl = document.getElementById("feedbackOpinion");
+      const feedbackNicknameEl = document.getElementById("feedbackNickname");
+      const feedbackEmailEl = document.getElementById("feedbackEmail");
+      const feedbackSubmitButtonEl = document.getElementById("feedbackSubmitButton");
+      const feedbackStatusEl = document.getElementById("feedbackStatus");
+      let activeTab = "chat";
 
       const fmtTime = (ms) => {
         const date = new Date(ms);
@@ -134,6 +178,20 @@
         return true;
       }
 
+      function setActiveTab(tabName) {
+        activeTab = tabName;
+        const isDeveloperTab = tabName === "developer";
+        chatTabEls.forEach((el) => el.classList.toggle("hidden-tab", isDeveloperTab));
+        developerPanelEl.classList.toggle("hidden-tab", !isDeveloperTab);
+        developerTabButton.classList.toggle("active", isDeveloperTab);
+        if (isDeveloperTab) {
+          developerMessageEl.classList.remove("show");
+          window.requestAnimationFrame(() => {
+            developerMessageEl.classList.add("show");
+          });
+        }
+      }
+
       async function fetchRooms() {
         const res = await fetch("/api/rooms");
         const data = await res.json();
@@ -163,6 +221,7 @@
             </div>
           `;
           btn.addEventListener("click", async () => {
+            setActiveTab("chat");
             if (room.hasPassword && !getPasswordForRoom(room.id)) {
               const ok = promptPassword(room);
               if (!ok) return;
@@ -246,6 +305,7 @@
         if (event.key === "Enter") sendMessage();
       });
       newRoomButton.addEventListener("click", async () => {
+        setActiveTab("chat");
         const name = window.prompt("ルーム名は？");
         if (!name) return;
         const password = window.prompt("パスワード（任意・空欄OK）") || "";
@@ -263,6 +323,38 @@
           }
         }, 100);
       });
+
+      async function submitFeedback(event) {
+        event.preventDefault();
+        const opinion = feedbackOpinionEl.value.trim();
+        const nicknameInput = feedbackNicknameEl.value.trim();
+        const emailInput = feedbackEmailEl.value.trim();
+        if (!opinion) return;
+
+        feedbackSubmitButtonEl.disabled = true;
+        feedbackStatusEl.textContent = "送信中です...";
+        try {
+          const res = await fetch("/api/feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              opinion,
+              nickname: nicknameInput,
+              email: emailInput,
+            }),
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            throw new Error(data?.error || "送信に失敗しました");
+          }
+          feedbackOpinionEl.value = "";
+          feedbackStatusEl.textContent = "ご意見を受け付けました。ありがとうございます。";
+        } catch (err) {
+          feedbackStatusEl.textContent = `送信エラー: ${err.message}`;
+        } finally {
+          feedbackSubmitButtonEl.disabled = false;
+        }
+      }
 
       // モビーに相談機能 (Cloudflare Workers AI via Vercel API)
       const mobyChatEl = document.getElementById("mobyChat");
@@ -349,6 +441,13 @@
       mobyInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") askMoby();
       });
+      developerTabButton.addEventListener("click", () => {
+        setActiveTab(activeTab === "developer" ? "chat" : "developer");
+      });
+      backToChatButton.addEventListener("click", () => {
+        setActiveTab("chat");
+      });
+      feedbackFormEl.addEventListener("submit", submitFeedback);
 
       ensureNickname();
       fetchRooms();

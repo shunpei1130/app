@@ -17,9 +17,10 @@ function hashPassword(password) {
 
 async function verifyAccess(roomId, password) {
   const storedHash = await getRoomPasswordHash(sql, roomId);
-  if (!storedHash) return true;
+  if (storedHash === null) return { exists: false, allowed: false };
+  if (!storedHash) return { exists: true, allowed: true };
   const incomingHash = hashPassword(password || "");
-  return storedHash === incomingHash;
+  return { exists: true, allowed: storedHash === incomingHash };
 }
 
 module.exports = async (req, res) => {
@@ -34,8 +35,11 @@ module.exports = async (req, res) => {
     }
 
     const password = req.headers["x-room-password"] || "";
-    const allowed = await verifyAccess(roomId, password);
-    if (!allowed) {
+    const access = await verifyAccess(roomId, password);
+    if (!access.exists) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+    if (!access.allowed) {
       return res.status(403).json({ error: "Forbidden" });
     }
 

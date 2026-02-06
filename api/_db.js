@@ -21,8 +21,19 @@ async function ensureSchema(sql) {
       expires_at BIGINT NOT NULL
     )
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS feedback_messages (
+      id SERIAL PRIMARY KEY,
+      nickname TEXT,
+      email TEXT,
+      opinion TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    )
+  `;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_room ON messages(room_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_expires ON messages(expires_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_rooms_created ON rooms(created_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback_messages(created_at)`;
   await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS password_hash TEXT`;
   schemaReady = true;
 }
@@ -32,31 +43,47 @@ async function seedIfEmpty(sql) {
   if (result.rows[0].count > 0) return;
   const now = Date.now();
   const rooms = ["Sunset Cafe", "Soft Studio", "Cozy Pets", "Cloud Diary"];
+  const insertedRoomIds = [];
   for (const name of rooms) {
-    await sql`INSERT INTO rooms (name, created_at) VALUES (${name}, ${now})`;
+    const inserted = await sql`
+      INSERT INTO rooms (name, created_at)
+      VALUES (${name}, ${now})
+      RETURNING id
+    `;
+    insertedRoomIds.push(inserted.rows[0].id);
   }
-  await addMessage(sql, 1, "A", "Good morning! I brought the fluffy stickers today.");
-  await addMessage(sql, 1, "ME", "Yay! Drop them here and I will pin them to the top.");
-  await addMessage(sql, 1, "N", "Tea of the day: peach milk. It is super sweet.");
+  const firstRoomId = insertedRoomIds[0];
+  await addMessage(sql, firstRoomId, "A", "Good morning! I brought the fluffy stickers today.");
+  await addMessage(sql, firstRoomId, "ME", "Yay! Drop them here and I will pin them to the top.");
+  await addMessage(sql, firstRoomId, "N", "Tea of the day: peach milk. It is super sweet.");
 }
 
 async function cleanupExpired(sql) {
   const now = Date.now();
+  const roomExpireThreshold = now - DAY_MS;
   await sql`DELETE FROM messages WHERE expires_at <= ${now}`;
+  await sql`
+    DELETE FROM messages
+    WHERE room_id IN (
+      SELECT id
+      FROM rooms
+      WHERE created_at <= ${roomExpireThreshold}
+    )
+  `;
+  await sql`DELETE FROM rooms WHERE created_at <= ${roomExpireThreshold}`;
 }
 
 async function listRooms(sql) {
   const now = Date.now();
   const result = await sql`
-    SELECT r.id, r.name,
+    SELECT r.id, r.name, r.created_at,
       (r.password_hash IS NOT NULL AND r.password_hash <> '') as has_password,
-      (SELECT COUNT(*) FROM messages m WHERE m.room_id = r.id AND m.expires_at > ${now}) as active_messages,
-      (SELECT MIN(m.expires_at) FROM messages m WHERE m.room_id = r.id AND m.expires_at > ${now}) as next_expire_at
+      (SELECT COUNT(*) FROM messages m WHERE m.room_id = r.id AND m.expires_at > ${now}) as active_messages
     FROM rooms r
     ORDER BY r.id ASC
   `;
   return result.rows.map((row) => {
-    const nextExpireAt = Number(row.next_expire_at) || now + DAY_MS;
+    const nextExpireAt = Number(row.created_at) + DAY_MS;
     const diff = Math.max(0, nextExpireAt - now);
     const hours = Math.floor(diff / 3600000);
     return {
@@ -107,13 +134,22 @@ async function addRoom(sql, name, passwordHash) {
   return result.rows[0].id;
 }
 
+async function addFeedback(sql, nickname, email, opinion) {
+  const now = Date.now();
+  await sql`
+    INSERT INTO feedback_messages (nickname, email, opinion, created_at)
+    VALUES (${nickname || null}, ${email || null}, ${opinion}, ${now})
+  `;
+}
+
 async function getRoomPasswordHash(sql, roomId) {
   const result = await sql`
     SELECT password_hash
     FROM rooms
     WHERE id = ${roomId}
   `;
-  return result.rows[0]?.password_hash || "";
+  if (!result.rows[0]) return null;
+  return result.rows[0].password_hash || "";
 }
 
 async function getJson(req) {
@@ -142,6 +178,7 @@ module.exports = {
   listMessages,
   addMessage,
   addRoom,
+  addFeedback,
   getRoomPasswordHash,
   getJson,
 };
