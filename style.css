@@ -151,6 +151,10 @@ p {
   padding: 10px 6vw 40px;
 }
 
+.layout.developer-mode {
+  grid-template-columns: 1fr;
+}
+
 .right-column {
   display: flex;
   flex-direction: column;

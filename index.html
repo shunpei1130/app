@@ -28,8 +28,8 @@
       </div>
     </header>
 
-    <main class="layout">
-      <aside class="panel rooms">
+    <main class="layout" id="mainLayout">
+      <aside class="panel rooms" id="roomsPanel">
         <div class="panel-header">
           <h2>ルーム</h2>
           <span class="badge" id="roomCount">0</span>
@@ -131,6 +131,8 @@
       const newRoomButton = document.getElementById("newRoomButton");
       const developerTabButton = document.getElementById("developerTabButton");
       const backToChatButton = document.getElementById("backToChatButton");
+      const mainLayoutEl = document.getElementById("mainLayout");
+      const roomsPanelEl = document.getElementById("roomsPanel");
       const chatTabEls = Array.from(document.querySelectorAll(".js-chat-tab"));
       const developerPanelEl = document.getElementById("developerPanel");
       const developerMessageEl = document.getElementById("developerMessage");
@@ -182,6 +184,8 @@
         activeTab = tabName;
         const isDeveloperTab = tabName === "developer";
         chatTabEls.forEach((el) => el.classList.toggle("hidden-tab", isDeveloperTab));
+        roomsPanelEl.classList.toggle("hidden-tab", isDeveloperTab);
+        mainLayoutEl.classList.toggle("developer-mode", isDeveloperTab);
         developerPanelEl.classList.toggle("hidden-tab", !isDeveloperTab);
         developerTabButton.classList.toggle("active", isDeveloperTab);
         if (isDeveloperTab) {
