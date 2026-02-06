@@ -71,6 +71,10 @@
             <h2 id="roomTitle">Loading...</h2>
             <p class="subtitle" id="roomSubtitle">ローカルサーバーへ接続中</p>
           </div>
+          <div class="chat-header-actions">
+            <span class="badge soft nickname-badge" id="nicknameDisplay">名前: -</span>
+            <button class="pill ghost small" id="changeNicknameButton" type="button">名前変更</button>
+          </div>
         </div>
 
         <div class="chat-body" id="chatBody"></div>
@@ -119,7 +123,7 @@
       const state = { rooms: [], activeRoomId: null };
       const roomPasswords = new Map();
       const nicknameKey = "mofu_nickname";
-      let nickname = localStorage.getItem(nicknameKey);
+      let nickname = normalizeNickname(localStorage.getItem(nicknameKey));
 
       const roomListEl = document.getElementById("roomList");
       const roomCountEl = document.getElementById("roomCount");
@@ -128,6 +132,8 @@
       const chatBodyEl = document.getElementById("chatBody");
       const composerInput = document.getElementById("composerInput");
       const sendButton = document.getElementById("sendButton");
+      const changeNicknameButton = document.getElementById("changeNicknameButton");
+      const nicknameDisplayEl = document.getElementById("nicknameDisplay");
       const newRoomButton = document.getElementById("newRoomButton");
       const developerTabButton = document.getElementById("developerTabButton");
       const backToChatButton = document.getElementById("backToChatButton");
@@ -159,14 +165,40 @@
         return `自動消去まで ${hours}時間 ${mins}分`;
       };
 
-      function ensureNickname() {
-        if (nickname) return;
-        const input = window.prompt("ニックネームを登録してください");
-        nickname = String(input || "").trim().slice(0, 12);
-        if (!nickname) {
-          nickname = `ねこ${Math.floor(Math.random() * 900 + 100)}`;
-        }
+      function buildRandomNickname() {
+        return `ねこ${Math.floor(Math.random() * 900 + 100)}`;
+      }
+
+      function normalizeNickname(input) {
+        const trimmed = String(input || "").trim();
+        return trimmed ? trimmed.slice(0, 12) : "";
+      }
+
+      function updateNicknameDisplay() {
+        if (!nicknameDisplayEl) return;
+        nicknameDisplayEl.textContent = `名前: ${nickname || "-"}`;
+      }
+
+      function setNickname(nextNickname) {
+        nickname = normalizeNickname(nextNickname) || buildRandomNickname();
         localStorage.setItem(nicknameKey, nickname);
+        updateNicknameDisplay();
+      }
+
+      function ensureNickname() {
+        if (nickname) {
+          updateNicknameDisplay();
+          return;
+        }
+        const input = window.prompt("ニックネームを登録してください");
+        setNickname(normalizeNickname(input));
+      }
+
+      function promptNicknameChange() {
+        const input = window.prompt("新しいニックネームを入力してください", nickname || "");
+        if (input === null) return;
+        setNickname(normalizeNickname(input));
+        loadMessages();
       }
 
       function getPasswordForRoom(roomId) {
@@ -305,6 +337,7 @@
       }
 
       sendButton.addEventListener("click", sendMessage);
+      changeNicknameButton.addEventListener("click", promptNicknameChange);
       composerInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") sendMessage();
       });
