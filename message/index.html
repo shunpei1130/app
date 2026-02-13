@@ -1,0 +1,1017 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>モビー開発者と意見交換</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap");
+
+      :root {
+        --bg-sky: #eef4ff;
+        --bg-lilac: #f4efff;
+        --bg-pearl: #f9fbff;
+        --ink-0: #111827;
+        --ink-1: #374151;
+        --ink-2: #6b7280;
+        --ink-soft: #9ca3af;
+        --panel: rgba(255, 255, 255, 0.72);
+        --line: rgba(148, 163, 184, 0.35);
+        --accent: #2d5bd8;
+        --accent-2: #7b4de3;
+        --accent-soft: #dde7ff;
+        --good: #0ea5e9;
+        --warn: #f59e0b;
+        --warn-bg: #fffbeb;
+        --warn-line: #fde68a;
+        --shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        --radius-2xl: 28px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink-0);
+        font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at 12% 16%, #ffffff 0%, transparent 40%),
+          radial-gradient(circle at 86% 2%, #e9eeff 0%, transparent 38%),
+          radial-gradient(circle at 12% 90%, #ddf4ff 0%, transparent 42%),
+          linear-gradient(150deg, var(--bg-pearl), var(--bg-sky));
+        overflow-x: hidden;
+      }
+
+      .ambient,
+      .noise {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -2;
+      }
+
+      .ambient::before,
+      .ambient::after {
+        content: "";
+        position: absolute;
+        width: 42vmax;
+        height: 42vmax;
+        border-radius: 999px;
+        filter: blur(0.1px);
+      }
+
+      .ambient::before {
+        left: -14vmax;
+        top: -8vmax;
+        background: radial-gradient(circle, rgba(123, 77, 227, 0.24), transparent 70%);
+        animation: driftA 16s ease-in-out infinite alternate;
+      }
+
+      .ambient::after {
+        right: -18vmax;
+        bottom: -10vmax;
+        background: radial-gradient(circle, rgba(45, 91, 216, 0.2), transparent 70%);
+        animation: driftB 20s ease-in-out infinite alternate;
+      }
+
+      .noise {
+        background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        background-size: 4px 4px;
+        opacity: 0.22;
+        mix-blend-mode: multiply;
+        z-index: -1;
+      }
+
+      .page-shell {
+        width: min(980px, 100% - 32px);
+        margin: 0 auto;
+        padding: 24px 0 52px;
+        display: grid;
+        gap: 16px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-2xl);
+        padding: 18px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(16px);
+        position: relative;
+      }
+
+      .top {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .top-title {
+        font-family: "Noto Serif JP", "Hiragino Mincho ProN", serif;
+        margin: 0;
+        font-size: clamp(28px, 4.9vw, 48px);
+        line-height: 1;
+      }
+
+      .top-sub {
+        margin: 8px 0 0;
+        color: var(--ink-2);
+        max-width: 68ch;
+      }
+
+      .top-kicker {
+        margin: 0;
+        color: #5b6579;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 11px;
+      }
+
+      .top a {
+        text-decoration: none;
+        color: #2f3f57;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 700;
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .top a:hover,
+      .top a:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      }
+
+      .hero {
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.9);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -80px;
+        top: -70px;
+        width: 220px;
+        height: 220px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.88), transparent 72%);
+      }
+
+      .hero-label {
+        margin: 0 0 8px;
+        color: var(--accent);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 11px;
+      }
+
+      .hero-copy {
+        margin: 0;
+        position: relative;
+        z-index: 1;
+        color: #233047;
+        max-width: 72ch;
+        line-height: 1.95;
+        white-space: pre-wrap;
+        font-size: clamp(14px, 1.4vw, 17px);
+      }
+
+      .hero-copy strong {
+        color: #1f2a44;
+      }
+
+      .hero-meta {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .chip {
+        font-size: 12px;
+        line-height: 1;
+        color: #2b3550;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(148, 163, 184, 0.34);
+      }
+
+      .composer-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .composer-head h2 {
+        margin: 0;
+        font-size: 19px;
+      }
+
+      .muted {
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+
+      .form {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      label {
+        display: block;
+        color: #293548;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      input,
+      textarea,
+      button {
+        font: inherit;
+      }
+
+      input,
+      textarea {
+        margin-top: 8px;
+        width: 100%;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--ink-0);
+        transition: border-color 180ms ease, box-shadow 180ms ease;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: rgba(45, 91, 216, 0.6);
+        box-shadow: 0 0 0 4px rgba(45, 91, 216, 0.14);
+      }
+
+      input {
+        padding: 10px 12px;
+        line-height: 1.2;
+      }
+
+      textarea {
+        min-height: 120px;
+        padding: 12px;
+        resize: vertical;
+        line-height: 1.8;
+      }
+
+      .composer-meta {
+        margin-top: -4px;
+      }
+
+      .counter {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+
+      .counter.critical #charCount {
+        color: #be123c;
+        font-weight: 700;
+      }
+
+      .meter {
+        margin-top: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #ecf0f7;
+        overflow: hidden;
+      }
+
+      .meter-fill {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, var(--good), #38bdf8);
+        border-radius: 999px;
+        transition: width 120ms linear;
+      }
+
+      .meter-fill.warning {
+        background: linear-gradient(90deg, #f97316, #ef4444);
+      }
+
+      .row {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff;
+        font-weight: 700;
+        padding: 10px 16px;
+        cursor: pointer;
+        transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+        letter-spacing: 0.02em;
+      }
+
+      button:hover,
+      button:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(45, 91, 216, 0.25);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.68;
+        box-shadow: none;
+      }
+
+      #status {
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 12px;
+      }
+
+      .empty {
+        margin: 0;
+        text-align: center;
+        border: 1px dashed rgba(148, 163, 184, 0.4);
+        border-radius: 16px;
+        padding: 26px;
+        background: rgba(255, 255, 255, 0.55);
+        color: #263347;
+      }
+
+      .empty strong {
+        color: #111827;
+      }
+
+      .post {
+        border: 1px solid rgba(129, 145, 166, 0.35);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.78);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+        position: relative;
+        overflow: hidden;
+        animation: reveal 300ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      .post::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-left: 5px solid var(--tone);
+      }
+
+      .post::after {
+        content: "";
+        position: absolute;
+        right: -24px;
+        top: -24px;
+        width: 120px;
+        height: 120px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.24), transparent 72%);
+        opacity: 0.28;
+      }
+
+      .post-header {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+      }
+
+      .post-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+
+      .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: white;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--tone), var(--tone-2));
+      }
+
+      .post-name {
+        margin: 0;
+        color: #1f2d4d;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .post-name .status-pill {
+        font-size: 11px;
+        color: #4338ca;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        padding: 2px 8px;
+        white-space: nowrap;
+      }
+
+      .post-time {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+
+      .post-body {
+        margin: 0;
+        position: relative;
+        z-index: 1;
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.75;
+        color: #1f2937;
+      }
+
+      .post-id {
+        margin-left: auto;
+        color: #94a3b8;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .notice {
+        border-left: 4px solid var(--warn);
+        background: var(--warn-bg);
+      }
+
+      .notice p {
+        margin: 8px 0;
+        color: #7c5c00;
+      }
+
+      .lock-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        z-index: 10;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 14px;
+        backdrop-filter: blur(7px);
+      }
+
+      .lock-card {
+        width: min(560px, 100%);
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        padding: 18px;
+        box-shadow: var(--shadow);
+        animation: popIn 240ms ease both;
+      }
+
+      .lock-card h2 {
+        margin: 0;
+      }
+
+      .lock-card p {
+        color: #334155;
+      }
+
+      .lock-warning {
+        margin-top: 12px;
+        padding: 10px;
+        border: 1px solid var(--warn-line);
+        border-radius: 11px;
+        background: var(--warn-bg);
+        color: #92400e;
+        font-size: 13px;
+      }
+
+      .lock-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .hide {
+        display: none;
+      }
+
+      @keyframes reveal {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes popIn {
+        from {
+          opacity: 0;
+          transform: scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes driftA {
+        0% {
+          transform: translate3d(0, 0, 0);
+        }
+        100% {
+          transform: translate3d(30px, 24px, 0);
+        }
+      }
+
+      @keyframes driftB {
+        0% {
+          transform: translate3d(0, 0, 0);
+        }
+        100% {
+          transform: translate3d(-24px, -20px, 0);
+        }
+      }
+
+      @media (max-width: 640px) {
+        .top {
+          gap: 12px;
+        }
+
+        .top a {
+          width: 100%;
+          text-align: center;
+        }
+
+        .composer-head {
+          display: block;
+        }
+
+        .composer-meta {
+          margin-top: 0;
+        }
+
+        .post-header {
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+
+        .ambient::before,
+        .ambient::after {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <div class="noise" aria-hidden="true"></div>
+
+    <section class="lock-overlay" id="lockOverlay">
+      <form class="lock-card card" id="lockForm">
+        <h2 id="lockTitle"></h2>
+        <p id="lockMessage"></p>
+        <p class="lock-warning">
+          このページの閲覧キーはあなた専用です。家族や友人、会社の端末と共有しないでください。
+          他者に見られる端末ではこのページに入らないようお願いします。
+        </p>
+
+        <label for="lockPassword">パスワード</label>
+        <input id="lockPassword" type="password" autocomplete="current-password" maxlength="64" required />
+
+        <div id="confirmBlock" class="hide">
+          <label for="lockPasswordConfirm">パスワード確認</label>
+          <input id="lockPasswordConfirm" type="password" autocomplete="new-password" maxlength="64" required />
+        </div>
+
+        <div class="row">
+          <button type="submit" id="lockSubmit"></button>
+          <p id="lockStatus"></p>
+        </div>
+      </form>
+    </section>
+
+    <main class="page-shell">
+      <header class="card top">
+        <div>
+          <p class="top-kicker">Creative Board</p>
+          <h1 class="top-title">モビー開発者と意見交換</h1>
+          <p class="top-sub">
+            テキスト投稿のみで、匿名のアイデアや違和感を投げてください。
+            投稿内容は掲示板に残り、開発の判断材料として蓄積されます。
+          </p>
+        </div>
+        <a href="/">トップへ戻る</a>
+      </header>
+
+      <section class="card hero">
+        <p class="hero-label">Developer Note</p>
+        <h2>何に価値があると思いますか？</h2>
+        <p class="hero-copy">
+          世の中コンテンツであふれてきました。安価に大量のものが手に入るようになりました。
+          ただ、本当に大事なものが何かを考える機会が減っていると思います。
+          本当に価値のあるものを創りたいと考えています。その一つがカメラ型キーホルダーモビーです。
+          なにか他にこんなものがあったらいいな、という意見がありましたらお気軽にどうぞ。
+        </p>
+        <div class="hero-meta">
+          <span class="chip" id="postCountBadge">投稿: 0件</span>
+          <span class="chip" id="latestStatus">最新: -</span>
+          <span class="chip">投稿はDBに永続保存（24時間で削除なし）</span>
+        </div>
+      </section>
+
+      <section class="card notice">
+        <p><strong>公開範囲について:</strong> パスワードを設定したこの端末からのみ閲覧できるようにして、投稿内容が外部に公開されないようにお願いします。</p>
+        <p>入力はテキストのみです。短文でも、違和感のある意見でも歓迎します。</p>
+      </section>
+
+      <section class="card">
+        <div class="composer-head">
+          <h2>新規投稿</h2>
+          <p class="muted" id="composerHint">投稿するたびに、ページが更新されるたび新しい流れが見えます。</p>
+        </div>
+
+        <form id="postForm" class="form">
+          <label for="nickname">ハンドルネーム（任意）</label>
+          <input id="nickname" type="text" maxlength="24" placeholder="匿名でもOK（空欄なら匿名）" />
+
+          <label for="body">メッセージ</label>
+          <textarea id="body" maxlength="1200" required placeholder="率直な意見を入力してください"></textarea>
+
+          <div class="composer-meta">
+            <div class="counter" id="composerCounter">
+              <span id="charCount">0 / 1200</span>
+              <span class="muted">投稿の価値は短くても伝わります</span>
+            </div>
+            <div class="meter" aria-hidden="true"><span class="meter-fill" id="charBar"></span></div>
+          </div>
+
+          <div class="row">
+            <button type="submit" id="submitButton">投稿する</button>
+            <span id="status" aria-live="polite"></span>
+          </div>
+        </form>
+      </section>
+
+      <section id="timeline" class="timeline" aria-live="polite"></section>
+      <p id="emptyState" class="empty card">
+        <strong>まだ投稿がありません。</strong><br />最初の一言をここに刻んでみてください。
+      </p>
+    </main>
+
+    <script>
+      const API_URL = "/api/message-board";
+      const MAX_BODY_LENGTH = 1200;
+      const PASSWORD_HASH_KEY = "moby_message_password_hash_v1";
+      const AVATAR_SET = [
+        { tone: "#2563eb", tone2: "#60a5fa" },
+        { tone: "#8b5cf6", tone2: "#c4b5fd" },
+        { tone: "#14b8a6", tone2: "#5eead4" },
+        { tone: "#f97316", tone2: "#fdba74" },
+        { tone: "#ec4899", tone2: "#f9a8d4" },
+        { tone: "#06b6d4", tone2: "#67e8f9" },
+        { tone: "#10b981", tone2: "#86efac" },
+      ];
+
+      const lockOverlay = document.getElementById("lockOverlay");
+      const lockTitle = document.getElementById("lockTitle");
+      const lockMessage = document.getElementById("lockMessage");
+      const lockForm = document.getElementById("lockForm");
+      const lockPassword = document.getElementById("lockPassword");
+      const lockPasswordConfirm = document.getElementById("lockPasswordConfirm");
+      const lockStatus = document.getElementById("lockStatus");
+      const lockSubmit = document.getElementById("lockSubmit");
+      const confirmBlock = document.getElementById("confirmBlock");
+
+      const postForm = document.getElementById("postForm");
+      const nicknameInput = document.getElementById("nickname");
+      const bodyInput = document.getElementById("body");
+      const charCount = document.getElementById("charCount");
+      const charBar = document.getElementById("charBar");
+      const counterWrap = document.getElementById("composerCounter");
+      const submitButton = document.getElementById("submitButton");
+      const statusEl = document.getElementById("status");
+      const timelineEl = document.getElementById("timeline");
+      const emptyStateEl = document.getElementById("emptyState");
+      const postCountBadge = document.getElementById("postCountBadge");
+      const latestStatus = document.getElementById("latestStatus");
+
+      let unlocked = false;
+      let setupMode = false;
+      let pollTimer;
+
+      function hashString(input) {
+        let hash = 5381;
+        for (let i = 0; i < input.length; i += 1) {
+          hash = (hash * 33) ^ input.charCodeAt(i);
+        }
+        return Math.abs(hash);
+      }
+
+      function formatDate(value) {
+        const dt = new Date(value);
+        return dt.toLocaleString("ja-JP", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function formatRelative(value) {
+        const delta = Date.now() - Number(value);
+        const sec = Math.max(0, Math.floor(delta / 1000));
+        if (sec < 60) return "たった今";
+        const min = Math.floor(sec / 60);
+        if (min < 60) return `${min}分前`;
+        const hour = Math.floor(min / 60);
+        if (hour < 24) return `${hour}時間前`;
+        const day = Math.floor(hour / 24);
+        return `${day}日前`;
+      }
+
+      async function sha256Hex(text) {
+        const raw = new TextEncoder().encode(text);
+        const hash = await crypto.subtle.digest("SHA-256", raw);
+        return Array.from(new Uint8Array(hash))
+          .map((x) => x.toString(16).padStart(2, "0"))
+          .join("");
+      }
+
+      function updateCharCounter() {
+        const length = bodyInput.value.length;
+        charCount.textContent = `${length} / ${MAX_BODY_LENGTH}`;
+        const ratio = Math.min(100, Math.round((length / MAX_BODY_LENGTH) * 100));
+        charBar.style.width = `${ratio}%`;
+
+        counterWrap.classList.toggle("critical", length > 1100);
+        charBar.classList.toggle("warning", length > 1100);
+        submitButton.disabled = length === 0;
+      }
+
+      function syncComposerState() {
+        submitButton.disabled = bodyInput.value.trim().length === 0;
+      }
+
+      function pickTone(post) {
+        const key = `${post.nickname || "匿名"}-${post.id}-${post.body}`;
+        const tone = AVATAR_SET[hashString(key) % AVATAR_SET.length];
+        return tone;
+      }
+
+      function renderPosts(posts) {
+        timelineEl.innerHTML = "";
+        const count = Array.isArray(posts) ? posts.length : 0;
+        postCountBadge.textContent = `投稿: ${count}件`;
+        latestStatus.textContent = count === 0 ? "最新: --" : `最新: ${formatRelative(posts[0].createdAt)}`;
+
+        if (count === 0) {
+          emptyStateEl.classList.remove("hide");
+          return;
+        }
+
+        emptyStateEl.classList.add("hide");
+
+        const frag = document.createDocumentFragment();
+        posts.forEach((post, index) => {
+          const tone = pickTone(post);
+          const item = document.createElement("article");
+          item.className = "post";
+          item.style.setProperty("--tone", tone.tone);
+          item.style.setProperty("--tone-2", tone.tone2);
+          item.style.animationDelay = `${Math.min(index * 55, 440)}ms`;
+
+          const head = document.createElement("div");
+          head.className = "post-header";
+
+          const meta = document.createElement("div");
+          meta.className = "post-meta";
+
+          const avatar = document.createElement("span");
+          avatar.className = "avatar";
+          const nameText = post.nickname?.trim() || "匿名";
+          avatar.textContent = nameText.slice(0, 1);
+
+          const name = document.createElement("p");
+          name.className = "post-name";
+          name.textContent = nameText;
+
+          if (index === 0) {
+            const latest = document.createElement("span");
+            latest.className = "status-pill";
+            latest.textContent = "最新";
+            name.appendChild(latest);
+          }
+
+          const time = document.createElement("p");
+          time.className = "post-time";
+          time.textContent = `${formatDate(post.createdAt)}（${formatRelative(post.createdAt)}）`;
+
+          const postId = document.createElement("span");
+          postId.className = "post-id";
+          postId.textContent = `#${String(post.id).padStart(4, "0")}`;
+
+          meta.appendChild(avatar);
+          meta.appendChild(name);
+          meta.appendChild(time);
+
+          head.appendChild(meta);
+          head.appendChild(postId);
+
+          const body = document.createElement("p");
+          body.className = "post-body";
+          body.textContent = post.body;
+
+          item.appendChild(head);
+          item.appendChild(body);
+          frag.appendChild(item);
+        });
+
+        timelineEl.appendChild(frag);
+      }
+
+      function initLockUI() {
+        const saved = localStorage.getItem(PASSWORD_HASH_KEY);
+        setupMode = !saved;
+        lockStatus.textContent = "";
+        lockPassword.value = "";
+        lockPasswordConfirm.value = "";
+
+        if (setupMode) {
+          lockTitle.textContent = "初回パスワード登録";
+          lockMessage.textContent = "初めて入る方へ。先にこのページを開けるためのパスワードを設定してください。";
+          confirmBlock.classList.remove("hide");
+          lockPasswordConfirm.required = true;
+          lockSubmit.textContent = "パスワードを保存して入る";
+          lockPassword.setAttribute("autocomplete", "new-password");
+        } else {
+          lockTitle.textContent = "パスワードを入力";
+          lockMessage.textContent = "ローカルに保存した鍵でこのページをアンロックしてください。";
+          confirmBlock.classList.add("hide");
+          lockPasswordConfirm.required = false;
+          lockSubmit.textContent = "アンロック";
+          lockPassword.setAttribute("autocomplete", "current-password");
+        }
+      }
+
+      async function unlockPage() {
+        unlocked = true;
+        lockOverlay.classList.add("hide");
+        await loadPosts();
+        if (!pollTimer) {
+          pollTimer = setInterval(loadPosts, 30000);
+        }
+      }
+
+      lockForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        lockStatus.textContent = "";
+        const password = lockPassword.value.trim();
+
+        if (!password || password.length < 4) {
+          lockStatus.textContent = "4文字以上のパスワードを入力してください。";
+          return;
+        }
+
+        if (setupMode) {
+          const passwordConfirm = lockPasswordConfirm.value.trim();
+          if (password !== passwordConfirm) {
+            lockStatus.textContent = "確認用パスワードが一致しません。";
+            return;
+          }
+          const hash = await sha256Hex(password);
+          localStorage.setItem(PASSWORD_HASH_KEY, hash);
+          await unlockPage();
+          return;
+        }
+
+        const saved = localStorage.getItem(PASSWORD_HASH_KEY);
+        const incoming = await sha256Hex(password);
+        if (!saved || incoming !== saved) {
+          lockStatus.textContent = "パスワードが一致しません。";
+          return;
+        }
+
+        await unlockPage();
+      });
+
+      async function loadPosts() {
+        if (!unlocked) return;
+        statusEl.textContent = "読み込み中...";
+        try {
+          const res = await fetch(API_URL);
+          if (!res.ok) {
+            throw new Error("投稿の読み込みに失敗しました");
+          }
+          const payload = await res.json();
+          const posts = Array.isArray(payload.posts) ? payload.posts : [];
+          renderPosts(posts);
+          statusEl.textContent = "";
+        } catch (error) {
+          statusEl.textContent = error.message;
+        }
+      }
+
+      postForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!unlocked) return;
+
+        const nickname = nicknameInput.value.trim().slice(0, 24);
+        const body = bodyInput.value.trim();
+
+        if (!body) {
+          statusEl.textContent = "メッセージを入力してください。";
+          return;
+        }
+
+        submitButton.disabled = true;
+        statusEl.textContent = "投稿中...";
+
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              nickname,
+              body,
+            }),
+          });
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "投稿に失敗しました");
+          }
+
+          bodyInput.value = "";
+          updateCharCounter();
+          statusEl.textContent = "投稿しました。画面を更新しています。";
+          await loadPosts();
+        } catch (error) {
+          statusEl.textContent = error.message;
+        } finally {
+          syncComposerState();
+        }
+      });
+
+      bodyInput.addEventListener("input", () => {
+        updateCharCounter();
+        syncComposerState();
+      });
+
+      initLockUI();
+      updateCharCounter();
+      syncComposerState();
+      setTimeout(() => {
+        if (lockOverlay.classList.contains("hide")) {
+          bodyInput.focus({ preventScroll: true });
+        } else {
+          lockPassword.focus({ preventScroll: true });
+        }
+      }, 300);
+    </script>
+  </body>
+</html>

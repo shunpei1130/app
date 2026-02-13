@@ -30,10 +30,19 @@ async function ensureSchema(sql) {
       created_at BIGINT NOT NULL
     )
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS message_board_posts (
+      id SERIAL PRIMARY KEY,
+      nickname TEXT,
+      body TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    )
+  `;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_room ON messages(room_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_expires ON messages(expires_at)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_rooms_created ON rooms(created_at)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback_messages(created_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_message_board_created ON message_board_posts(created_at)`;
   await sql`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS password_hash TEXT`;
   schemaReady = true;
 }
@@ -142,6 +151,29 @@ async function addFeedback(sql, nickname, email, opinion) {
   `;
 }
 
+async function listBoardPosts(sql) {
+  const result = await sql`
+    SELECT id, nickname, body, created_at
+    FROM message_board_posts
+    ORDER BY created_at DESC
+    LIMIT 300
+  `;
+  return result.rows.map((row) => ({
+    id: Number(row.id),
+    nickname: row.nickname || "",
+    body: row.body,
+    createdAt: Number(row.created_at),
+  }));
+}
+
+async function addBoardPost(sql, nickname, body) {
+  const now = Date.now();
+  await sql`
+    INSERT INTO message_board_posts (nickname, body, created_at)
+    VALUES (${nickname || null}, ${body}, ${now})
+  `;
+}
+
 async function getRoomPasswordHash(sql, roomId) {
   const result = await sql`
     SELECT password_hash
@@ -179,6 +211,8 @@ module.exports = {
   addMessage,
   addRoom,
   addFeedback,
+  listBoardPosts,
+  addBoardPost,
   getRoomPasswordHash,
   getJson,
 };

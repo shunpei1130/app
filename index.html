@@ -24,6 +24,7 @@
       </div>
       <div class="top-actions">
         <button class="pill" id="newRoomButton">新しいルーム</button>
+        <button class="pill ghost small" id="messageBoardButton" type="button">意見交換掲示板</button>
         <button class="pill dev-switch" id="developerTabButton">こんにちは<br>開発者です</button>
       </div>
     </header>
@@ -135,6 +136,7 @@
       const changeNicknameButton = document.getElementById("changeNicknameButton");
       const nicknameDisplayEl = document.getElementById("nicknameDisplay");
       const newRoomButton = document.getElementById("newRoomButton");
+      const messageBoardButton = document.getElementById("messageBoardButton");
       const developerTabButton = document.getElementById("developerTabButton");
       const backToChatButton = document.getElementById("backToChatButton");
       const mainLayoutEl = document.getElementById("mainLayout");
@@ -359,6 +361,9 @@
             activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
         }, 100);
+      });
+      messageBoardButton.addEventListener("click", () => {
+        window.location.href = "/message/";
       });
 
       async function submitFeedback(event) {
